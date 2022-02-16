@@ -2,7 +2,11 @@ package gcp
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"sync"
+	"time"
 
 	"cloud.google.com/go/logging"
 	"github.com/tiiuae/log"
@@ -12,6 +16,15 @@ import (
 type Sink struct {
 	projectID string
 	logger    *logging.Logger
+}
+
+// WriterSink is a log sink which will format log entries into Google Cloud Logging supported format and write into the writer
+//
+// https://cloud.google.com/logging/docs/structured-logging
+type WriterSink struct {
+	projectID string
+	writer    io.Writer
+	mu        sync.Mutex
 }
 
 var severityMap map[log.Severity]logging.Severity = map[log.Severity]logging.Severity{
@@ -50,6 +63,14 @@ func New(ctx context.Context, projectID string, gcpLogger *logging.Logger) log.S
 	}
 }
 
+// NewWriter creates a new sink which will output JSON in Google Cloud Logging supported format
+func NewWriter(ctx context.Context, projectID string, w io.Writer) log.Sink {
+	return &WriterSink{
+		projectID: projectID,
+		writer:    w,
+	}
+}
+
 // LogEntry will record log entry into Google Cloud Logging
 func (s *Sink) LogEntry(ctx context.Context, e log.Entry) {
 	labels := make(map[string]string)
@@ -76,4 +97,34 @@ func (s *Sink) LogEntry(ctx context.Context, e log.Entry) {
 // Sync will flush any pending log entries into Google Cloud Logging
 func (s *Sink) Sync(ctx context.Context) error {
 	return s.logger.Flush()
+}
+
+// LogEntry will record log entry in JSON format with given writer
+func (s *WriterSink) LogEntry(ctx context.Context, e log.Entry) {
+	labels := make(map[string]string)
+	for _, a := range e.Attributes {
+		labels[a.Name] = fmt.Sprintf("%v", a.Value)
+	}
+
+	entry := map[string]interface{}{
+		"time":                                 e.Timestamp.Format(time.RFC3339),
+		"severity":                             severityMap[e.Severity].String(),
+		"message":                              fmt.Sprintf("%s", e.Body),
+		"logging.googleapis.com/labels":        labels,
+		"logging.googleapis.com/spanId":        e.SpanID,
+		"logging.googleapis.com/trace":         fmt.Sprintf("projects/%s/traces/%s", s.projectID, e.TraceID),
+		"logging.googleapis.com/trace_sampled": e.TraceFlags&log.TraceFlagsSampled != 0,
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	err := json.NewEncoder(s.writer).Encode(entry)
+	if err != nil {
+		panic(err)
+	}
+}
+
+// Sync with writer won't do anything as all entries are already written
+func (s *WriterSink) Sync(ctx context.Context) error {
+	return nil
 }
