@@ -88,7 +88,7 @@ func (s *Sink) LogEntry(ctx context.Context, e log.Entry) {
 		//Resource: *mrpb.MonitoredResource
 	}
 
-	if e.TraceID != "" {
+	if e.TraceFlags&log.TraceFlagsSampled != 0 {
 		gcpEntry.Trace = fmt.Sprintf("projects/%s/traces/%s", s.projectID, e.TraceID)
 		gcpEntry.SpanID = e.SpanID
 		gcpEntry.TraceSampled = e.TraceFlags&log.TraceFlagsSampled != 0
@@ -115,7 +115,7 @@ func (s *WriterSink) LogEntry(ctx context.Context, e log.Entry) {
 		"message":                       fmt.Sprintf("%s", e.Body),
 		"logging.googleapis.com/labels": labels,
 	}
-	if e.TraceID != "" {
+	if e.TraceFlags&log.TraceFlagsSampled != 0 {
 		entry["logging.googleapis.com/spanId"] = e.SpanID
 		entry["logging.googleapis.com/trace"] = fmt.Sprintf("projects/%s/traces/%s", s.projectID, e.TraceID)
 		entry["logging.googleapis.com/trace_sampled"] = e.TraceFlags&log.TraceFlagsSampled != 0
