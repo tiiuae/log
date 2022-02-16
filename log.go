@@ -97,7 +97,7 @@ func createEntry(ctx context.Context, severity Severity, message string, attrs [
 	spanID := spanCtx.SpanID().String()
 	traceFlags := TraceFlagsNone
 	if spanCtx.IsSampled() {
-		traceFlags &= TraceFlagsSampled
+		traceFlags |= TraceFlagsSampled
 	}
 
 	return Entry{
