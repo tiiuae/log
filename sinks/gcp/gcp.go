@@ -86,9 +86,12 @@ func (s *Sink) LogEntry(ctx context.Context, e log.Entry) {
 		//HTTPRequest: *HTTPRequest
 		//Operation: *logpb.LogEntryOperation
 		//Resource: *mrpb.MonitoredResource
-		Trace:        fmt.Sprintf("projects/%s/traces/%s", s.projectID, e.TraceID),
-		SpanID:       e.SpanID,
-		TraceSampled: e.TraceFlags&log.TraceFlagsSampled != 0,
+	}
+
+	if e.TraceID != "" {
+		gcpEntry.Trace = fmt.Sprintf("projects/%s/traces/%s", s.projectID, e.TraceID)
+		gcpEntry.SpanID = e.SpanID
+		gcpEntry.TraceSampled = e.TraceFlags&log.TraceFlagsSampled != 0
 	}
 
 	s.logger.Log(gcpEntry)
@@ -107,13 +110,15 @@ func (s *WriterSink) LogEntry(ctx context.Context, e log.Entry) {
 	}
 
 	entry := map[string]interface{}{
-		"time":                                 e.Timestamp.Format(time.RFC3339),
-		"severity":                             severityMap[e.Severity].String(),
-		"message":                              fmt.Sprintf("%s", e.Body),
-		"logging.googleapis.com/labels":        labels,
-		"logging.googleapis.com/spanId":        e.SpanID,
-		"logging.googleapis.com/trace":         fmt.Sprintf("projects/%s/traces/%s", s.projectID, e.TraceID),
-		"logging.googleapis.com/trace_sampled": e.TraceFlags&log.TraceFlagsSampled != 0,
+		"time":                          e.Timestamp.Format(time.RFC3339),
+		"severity":                      severityMap[e.Severity].String(),
+		"message":                       fmt.Sprintf("%s", e.Body),
+		"logging.googleapis.com/labels": labels,
+	}
+	if e.TraceID != "" {
+		entry["logging.googleapis.com/spanId"] = e.SpanID
+		entry["logging.googleapis.com/trace"] = fmt.Sprintf("projects/%s/traces/%s", s.projectID, e.TraceID)
+		entry["logging.googleapis.com/trace_sampled"] = e.TraceFlags&log.TraceFlagsSampled != 0
 	}
 
 	s.mu.Lock()
