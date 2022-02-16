@@ -110,7 +110,7 @@ func (s *WriterSink) LogEntry(ctx context.Context, e log.Entry) {
 	}
 
 	entry := map[string]interface{}{
-		"time":                          e.Timestamp.Format(time.RFC3339),
+		"time":                          e.Timestamp.Format(time.RFC3339Nano),
 		"severity":                      severityMap[e.Severity].String(),
 		"message":                       fmt.Sprintf("%s", e.Body),
 		"logging.googleapis.com/labels": labels,
