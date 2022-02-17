@@ -7,12 +7,12 @@ import (
 	"time"
 )
 
-// SimpleLogger logs events to stdout
-type SimpleLogger struct {
+// SimpleSink logs events to stdout
+type SimpleSink struct {
 }
 
 // LogEntry will do simple formatting and output given entry to stdout
-func (s *SimpleLogger) LogEntry(ctx context.Context, entry Entry) {
+func (s *SimpleSink) LogEntry(ctx context.Context, entry Entry) {
 	line := entry.Timestamp.Format(time.RFC3339)
 	line += " "
 	line += fmt.Sprintf("%s %v", entry.Severity, entry.Body)
@@ -27,6 +27,6 @@ func (s *SimpleLogger) LogEntry(ctx context.Context, entry Entry) {
 }
 
 // Sync does nothing with SimpleLogger as all entries are written immediately
-func (s *SimpleLogger) Sync(ctx context.Context) error {
+func (s *SimpleSink) Sync(ctx context.Context) error {
 	return nil
 }

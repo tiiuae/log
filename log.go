@@ -10,7 +10,7 @@ import (
 )
 
 // DefaultSink is used for logging entries with package level logging functions
-var DefaultSink Sink = &SimpleLogger{}
+var DefaultSink Sink = &SimpleSink{}
 
 // Print will log entries with Trace1 severity.
 //
