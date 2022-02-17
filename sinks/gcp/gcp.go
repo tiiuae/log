@@ -104,9 +104,17 @@ func (s *Sink) Sync(ctx context.Context) error {
 
 // LogEntry will record log entry in JSON format with given writer
 func (s *WriterSink) LogEntry(ctx context.Context, e log.Entry) {
+
+	var httpReq interface{}
 	labels := make(map[string]string)
+
 	for _, a := range e.Attributes {
-		labels[a.Name] = fmt.Sprintf("%v", a.Value)
+		switch a.Name {
+		case "httpRequest":
+			httpReq = a.Value
+		default:
+			labels[a.Name] = fmt.Sprintf("%v", a.Value)
+		}
 	}
 
 	entry := map[string]interface{}{
@@ -119,6 +127,9 @@ func (s *WriterSink) LogEntry(ctx context.Context, e log.Entry) {
 		entry["logging.googleapis.com/spanId"] = e.SpanID
 		entry["logging.googleapis.com/trace"] = fmt.Sprintf("projects/%s/traces/%s", s.projectID, e.TraceID)
 		entry["logging.googleapis.com/trace_sampled"] = e.TraceFlags&log.TraceFlagsSampled != 0
+	}
+	if httpReq != nil {
+		entry["httpRequest"] = httpReq
 	}
 
 	s.mu.Lock()
